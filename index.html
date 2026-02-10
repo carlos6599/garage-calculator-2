@@ -1,0 +1,445 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>J&C Garage Floor Material Calculator</title>
+
+  <!-- QR generator library (CDN). If you want fully-offline, tell me and I’ll swap this for an embedded QR script. -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+
+  <style>
+    :root{
+      /* ===== Brand Colors (edit these) ===== */
+      --brand: #0b1f3a;      /* primary */
+      --brand2: #f0b429;     /* accent */
+      --bg: #f6f7f9;
+      --card: #ffffff;
+      --text: #111827;
+      --muted: #6b7280;
+      --border: #d7dbe0;
+
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+    body { margin:0; background: var(--bg); color: var(--text); }
+    .wrap { max-width: 620px; margin: 0 auto; padding: 16px; }
+    .card { background: var(--card); border-radius: 18px; padding: 16px; box-shadow: 0 6px 18px rgba(0,0,0,.08); }
+    .header{
+      display:flex; align-items:center; gap:12px; margin-bottom: 10px;
+    }
+    .logo{
+      width: 44px; height: 44px; border-radius: 12px;
+      display:flex; align-items:center; justify-content:center;
+      background: rgba(11,31,58,.08);
+      overflow:hidden;
+      flex: 0 0 auto;
+    }
+    .logo img{ width:100%; height:100%; object-fit: cover; display:block; }
+    h1 { font-size: 18px; margin: 0; line-height: 1.1; }
+    .sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+    label { display:block; font-weight: 700; margin: 12px 0 6px; }
+    input, select, textarea{
+      width:100%; padding: 12px; font-size: 16px;
+      border-radius: 12px; border: 1px solid var(--border); background: #fff;
+      box-sizing: border-box;
+    }
+    textarea{ min-height: 120px; resize: vertical; }
+
+    .row { display:grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .btns { display:grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
+    button{
+      padding: 12px; font-size: 16px; border-radius: 12px; border: 0;
+      background: var(--brand); color: #fff; font-weight: 800;
+    }
+    button.secondary{ background: #e5e7eb; color: var(--text); }
+    button.accent{ background: var(--brand2); color: #111; }
+
+    .results { margin-top: 16px; display:none; }
+    .pill{
+      display:flex; justify-content: space-between; align-items:center;
+      background: #f2f4f7; border-radius: 14px; padding: 12px 14px; margin: 10px 0;
+      font-size: 16px; gap: 10px;
+    }
+    .pill strong{ text-align:right; overflow-wrap:anywhere; }
+    .mono{ font-variant-numeric: tabular-nums; }
+    .muted{ color: var(--muted); font-size: 13px; line-height: 1.35; margin-top: 10px; }
+
+    /* Vinyl chip blend checkboxes */
+    .chip-grid{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:10px;
+      margin-top: 8px;
+    }
+    .chip-item{
+      display:flex; align-items:center; gap:10px;
+      padding:12px; border:1px solid var(--border);
+      border-radius:12px; background:#fff;
+      user-select:none; -webkit-tap-highlight-color: transparent;
+    }
+    .chip-item input{ width:18px; height:18px; flex: 0 0 auto; }
+
+    /* Copy + Summary */
+    .summary-actions{
+      display:grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px;
+    }
+    .toast{
+      display:none;
+      margin-top:10px;
+      padding:10px 12px;
+      background: rgba(240,180,41,.22);
+      border: 1px solid rgba(240,180,41,.55);
+      border-radius: 12px;
+      font-size: 13px;
+    }
+
+    /* QR Section */
+    .qr-box{
+      margin-top: 14px;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: #fff;
+    }
+    .qr-row{
+      display:grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: end;
+    }
+    #qrCanvas{
+      margin-top: 12px;
+      display:flex;
+      justify-content:center;
+      padding: 12px;
+      background:#fff;
+      border-radius: 14px;
+      border: 1px dashed var(--border);
+    }
+
+    .divider{ height:1px; background: #edf0f3; margin: 14px 0; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+
+      <!-- ===== Header / Branding ===== -->
+      <div class="header">
+        <div class="logo" title="Logo">
+          <!-- J&C logo from Google Drive (direct image link) -->
+          <img
+            src="https://drive.google.com/uc?export=view&id=1EQROJAOSN6jKBWnxaASHUx1KfIJxiGBN"
+            alt="J&C Logo"
+          />
+        </div>
+        <div>
+          <h1>J&C Garage Floor Material Calculator</h1>
+          <div class="sub">Fast takeoffs • Tap-to-select blends • Copy for texting orders</div>
+        </div>
+      </div>
+
+      <!-- ===== Inputs ===== -->
+      <label for="project">Project Name</label>
+      <input id="project" placeholder="e.g., Smith Residence – 2 Car Garage" />
+
+      <label for="sqft">Garage Size (sq ft)</label>
+      <input id="sqft" inputmode="numeric" placeholder="e.g., 500" />
+
+      <div class="row">
+        <div>
+          <label for="color">6150 RC Color</label>
+          <select id="color">
+            <option value="Light Grey">Light Grey</option>
+            <option value="Tan">Tan</option>
+          </select>
+        </div>
+        <div>
+          <label for="baseCoverage">6150 RC Coverage Assumption</label>
+          <select id="baseCoverage">
+            <option value="450">450 sq ft / 2-gal kit (best case)</option>
+            <option value="425" selected>425 sq ft / kit (typical)</option>
+            <option value="400">400 sq ft / kit (worst case)</option>
+          </select>
+        </div>
+      </div>
+
+      <label>Vinyl Chip Blend (tap to select)</label>
+      <div class="chip-grid" id="chipBlends">
+        <label class="chip-item"><input type="checkbox" value="California Gray"> California Gray</label>
+        <label class="chip-item"><input type="checkbox" value="Midnight"> Midnight</label>
+        <label class="chip-item"><input type="checkbox" value="Tuxedo"> Tuxedo</label>
+        <label class="chip-item"><input type="checkbox" value="Light Gray"> Light Gray</label>
+        <label class="chip-item"><input type="checkbox" value="Smoke"> Smoke</label>
+        <label class="chip-item"><input type="checkbox" value="Hazelnut"> Hazelnut</label>
+        <label class="chip-item"><input type="checkbox" value="Saddle Tan"> Saddle Tan</label>
+        <label class="chip-item"><input type="checkbox" value="Medium Tan"> Medium Tan</label>
+      </div>
+
+      <div class="row">
+        <div>
+          <label for="buffer">Waste / Porosity Buffer</label>
+          <select id="buffer">
+            <option value="0">0%</option>
+            <option value="0.10" selected>10%</option>
+            <option value="0.15">15%</option>
+          </select>
+        </div>
+        <div>
+          <label for="rounding">Rounding</label>
+          <select id="rounding">
+            <option value="up" selected>Round up (recommended)</option>
+            <option value="exact">Show exact</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="btns">
+        <button id="calcBtn">Calculate</button>
+        <button class="secondary" id="resetBtn" type="button">Reset</button>
+      </div>
+
+      <!-- ===== Results ===== -->
+      <div class="results" id="results">
+        <div class="pill"><span>Project</span><strong id="projectOut"></strong></div>
+        <div class="pill"><span>6150 RC Kits</span><strong class="mono" id="kitsOut"></strong></div>
+        <div class="pill"><span>Vinyl Chip Boxes</span><strong class="mono" id="chipsOut"></strong></div>
+        <div class="pill"><span>Poly85 Gallons</span><strong class="mono" id="polyOut"></strong></div>
+        <div class="pill"><span>Chip Blend(s)</span><strong class="mono" id="blendOut"></strong></div>
+        <div class="pill"><span>Total Sq Ft (with buffer)</span><strong class="mono" id="bufferedSqftOut"></strong></div>
+
+        <div class="muted" id="notes"></div>
+
+        <div class="divider"></div>
+
+        <!-- ===== Auto-generated job summary ===== -->
+        <label for="summary">Job Summary (auto-generated)</label>
+        <textarea id="summary" readonly></textarea>
+
+        <div class="summary-actions">
+          <button class="accent" id="copyBtn" type="button">Copy Results (Text Order)</button>
+          <button class="secondary" id="copyShortBtn" type="button">Copy Short</button>
+        </div>
+
+        <div class="toast" id="toast">Copied ✅ Paste into a text message.</div>
+
+        <!-- ===== QR Code section ===== -->
+        <div class="qr-box">
+          <label for="qrLink">QR Code Link (for laminated sheet)</label>
+          <div class="qr-row">
+            <div>
+              <input id="qrLink" placeholder="Paste your Google Drive ‘Anyone with link’ URL here" />
+              <div class="muted">
+                Tip: use your final share link (Anyone with the link → Viewer). Generate QR, then screenshot/print for the laminate.
+              </div>
+            </div>
+            <button id="qrBtn" type="button">Generate QR</button>
+          </div>
+          <div id="qrCanvas"></div>
+        </div>
+      </div>
+
+      <div class="muted">
+        Rates: 6150 RC = 400–450 sq ft per 2-gal kit • Chips = 200 sq ft per box • Poly85 = 100 sq ft per gallon.
+      </div>
+    </div>
+  </div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+
+  function ceilIf(val, mode){ return mode === "up" ? Math.ceil(val) : val; }
+
+  function fmt(n){
+    const isInt = Math.abs(n - Math.round(n)) < 1e-9;
+    return isInt ? String(Math.round(n)) : n.toFixed(2);
+  }
+
+  function getSelectedBlends(){
+    return Array.from(document.querySelectorAll('#chipBlends input[type="checkbox"]:checked'))
+      .map(cb => cb.value);
+  }
+
+  function buildSummary(data, mode="full"){
+    const blends = data.blends.length ? data.blends.join(", ") : "—";
+    const bufferPct = fmt(data.buffer * 100) + "%";
+
+    if (mode === "short"){
+      return [
+        `Project: ${data.project}`,
+        `${fmt(data.sqft)} sq ft (+${bufferPct} buffer = ${fmt(data.bufferedSqft)} sq ft)`,
+        `6150 RC (${data.color}) Kits: ${fmt(data.kits)} | Chips Boxes: ${fmt(data.chips)} | Poly85 Gal: ${fmt(data.poly)}`,
+        `Blend(s): ${blends}`
+      ].join("\n");
+    }
+
+    return [
+      `J&C Floor Coating Material Order`,
+      `Project: ${data.project}`,
+      `Area: ${fmt(data.sqft)} sq ft`,
+      `Buffer: ${bufferPct}  →  Calc Area: ${fmt(data.bufferedSqft)} sq ft`,
+      ``,
+      `Base Coat: 6150 RC (${data.color})`,
+      `• Coverage Assumption: ${fmt(data.baseCov)} sq ft per 2-gal kit`,
+      `• Kits Needed: ${fmt(data.kits)}`,
+      ``,
+      `Vinyl Chips:`,
+      `• Blend(s): ${blends}`,
+      `• Boxes Needed (200 sq ft/box): ${fmt(data.chips)}`,
+      ``,
+      `Topcoat: Poly85`,
+      `• Gallons Needed (100 sq ft/gal): ${fmt(data.poly)}`
+    ].join("\n");
+  }
+
+  async function copyToClipboard(text){
+    if (navigator.clipboard && window.isSecureContext){
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.left = "-9999px";
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    let ok = false;
+    try { ok = document.execCommand("copy"); } catch(e) { ok = false; }
+    document.body.removeChild(ta);
+    return ok;
+  }
+
+  function showToast(msg="Copied ✅ Paste into a text message."){
+    const t = $("toast");
+    t.textContent = msg;
+    t.style.display = "block";
+    clearTimeout(window.__toastTimer);
+    window.__toastTimer = setTimeout(() => t.style.display = "none", 2200);
+  }
+
+  function calculate(){
+    const sqftRaw = ($("sqft").value || "").replace(/[^0-9.]/g, "");
+    const sqft = Number(sqftRaw);
+    if (!sqft || sqft <= 0){
+      alert("Enter a valid square footage (e.g., 500).");
+      return;
+    }
+
+    const project = ($("project").value || "").trim() || "—";
+    const color = $("color").value;
+    const baseCov = Number($("baseCoverage").value);
+    const buffer = Number($("buffer").value);
+    const rounding = $("rounding").value;
+
+    const bufferedSqft = sqft * (1 + buffer);
+
+    const kitsExact  = bufferedSqft / baseCov;
+    const chipsExact = bufferedSqft / 200;
+    const polyExact  = bufferedSqft / 100;
+
+    const kits  = ceilIf(kitsExact, rounding);
+    const chips = ceilIf(chipsExact, rounding);
+    const poly  = ceilIf(polyExact, rounding);
+
+    const blends = getSelectedBlends();
+
+    $("projectOut").textContent = project;
+    $("kitsOut").textContent  = fmt(kits);
+    $("chipsOut").textContent = fmt(chips);
+    $("polyOut").textContent  = fmt(poly);
+    $("blendOut").textContent = blends.length ? blends.join(", ") : "—";
+    $("bufferedSqftOut").textContent = fmt(bufferedSqft);
+
+    $("notes").innerHTML =
+      `6150 RC Color: <b>${color}</b><br/>` +
+      `Assumptions: ${fmt(baseCov)} sq ft/kit, Buffer: ${fmt(buffer*100)}%`;
+
+    const data = { project, sqft, bufferedSqft, color, baseCov, buffer, kits, chips, poly, blends };
+    $("summary").value = buildSummary(data, "full");
+
+    if (!($("qrLink").value || "").trim()){
+      $("qrLink").value = window.location.href;
+    }
+
+    $("results").style.display = "block";
+  }
+
+  $("calcBtn").addEventListener("click", calculate);
+
+  $("resetBtn").addEventListener("click", () => {
+    $("project").value = "";
+    $("sqft").value = "";
+    $("color").value = "Light Grey";
+    $("baseCoverage").value = "425";
+    $("buffer").value = "0.10";
+    $("rounding").value = "up";
+    $("summary").value = "";
+    document.querySelectorAll('#chipBlends input[type="checkbox"]').forEach(cb => cb.checked = false);
+    $("qrLink").value = "";
+    $("qrCanvas").innerHTML = "";
+    $("results").style.display = "none";
+    $("toast").style.display = "none";
+  });
+
+  $("copyBtn").addEventListener("click", async () => {
+    const text = ($("summary").value || "").trim();
+    if (!text){ showToast("Nothing to copy yet — hit Calculate first."); return; }
+    const ok = await copyToClipboard(text);
+    showToast(ok ? "Copied ✅ Paste into a text message." : "Copy failed — select the text and copy manually.");
+  });
+
+  $("copyShortBtn").addEventListener("click", async () => {
+    const sqftRaw = ($("sqft").value || "").replace(/[^0-9.]/g, "");
+    const sqft = Number(sqftRaw);
+    if (!sqft || sqft <= 0){ showToast("Hit Calculate first."); return; }
+
+    const project = ($("project").value || "").trim() || "—";
+    const color = $("color").value;
+    const baseCov = Number($("baseCoverage").value);
+    const buffer = Number($("buffer").value);
+    const rounding = $("rounding").value;
+    const bufferedSqft = sqft * (1 + buffer);
+
+    const kits  = ceilIf(bufferedSqft / baseCov, rounding);
+    const chips = ceilIf(bufferedSqft / 200, rounding);
+    const poly  = ceilIf(bufferedSqft / 100, rounding);
+    const blends = getSelectedBlends();
+
+    const data = { project, sqft, bufferedSqft, color, baseCov, buffer, kits, chips, poly, blends };
+    const shortText = buildSummary(data, "short");
+
+    const ok = await copyToClipboard(shortText);
+    showToast(ok ? "Copied Short ✅" : "Copy failed — select the text and copy manually.");
+  });
+
+  $("qrBtn").addEventListener("click", () => {
+    const link = ($("qrLink").value || "").trim();
+    if (!link){ alert("Paste the Google Drive link (or your hosted link) first."); return; }
+
+    const box = $("qrCanvas");
+    box.innerHTML = "";
+
+    const canvas = document.createElement("canvas");
+    box.appendChild(canvas);
+
+    try{
+      QRCode.toCanvas(canvas, link, {
+        margin: 1,
+        width: 220,
+        errorCorrectionLevel: "M"
+      }, function (error) {
+        if (error) {
+          console.error(error);
+          box.innerHTML = "<div class='muted'>QR generation failed. Check the link and try again.</div>";
+        }
+      });
+    } catch(e){
+      console.error(e);
+      box.innerHTML = "<div class='muted'>QR generation failed (library blocked/offline). If you want fully-offline QR, tell me.</div>";
+    }
+  });
+</script>
+</body>
+</html>
